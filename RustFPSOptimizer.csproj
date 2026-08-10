@@ -8,4 +8,8 @@
     <AssemblyName>RustFPSOptimizer_by_undeq</AssemblyName>
     <RootNamespace>RustFPSOptimizer</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,27 @@
+name: Build Rust FPS Optimizer
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build EXE
+        run: dotnet publish RustFPSOptimizer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:AssemblyName=RustFPSOptimizer_by_undeq
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: RustFPSOptimizer_by_undeq
+          path: bin/Release/net8.0-windows/win-x64/publish/RustFPSOptimizer_by_undeq.exe

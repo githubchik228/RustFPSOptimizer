@@ -4,16 +4,48 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Rust Performance Suite by undeq"
     Width="1250"
-    Height="780"
+    Height="800"
     MinWidth="1050"
     MinHeight="650"
     WindowStartupLocation="CenterScreen"
     Background="#101114">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#24262D"/>
+            <Setter Property="BorderBrush" Value="#343740"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style x:Key="SidebarButton"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Left"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Background" Value="#22242A"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#383A43"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Resources>
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <!-- HEADER -->
         <StackPanel Grid.Row="0">
             <TextBlock
                 Text="RUST PERFORMANCE SUITE"
@@ -31,38 +63,71 @@
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <ScrollViewer
+            <!-- SIDEBAR -->
+            <Border
                 Grid.Column="0"
-                VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <Button Content="Dashboard"
+                Background="#18191E"
+                CornerRadius="12"
+                Padding="10">
+                <ScrollViewer
+                    VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="⌂  Dashboard"
                             Click="Dashboard_Click"/>
-                    <Button Content="Optimize"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="⚡  Optimize"
                             Click="Optimize_Click"/>
-                    <Button Content="Profiles"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="◈  Profiles"
                             Click="Profiles_Click"/>
-                    <Button Content="Rust"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="🎮  Rust"
                             Click="Rust_Click"/>
-                    <Button Content="Benchmark"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="▣  Benchmark"
                             Click="Benchmark_Click"/>
-                    <Button Content="Live Monitor"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="◉  Live Monitor"
                             Click="LiveMonitor_Click"/>
-                    <Button Content="Network"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="⌁  Network"
                             Click="Network_Click"/>
-                    <Button Content="Tweak Lab"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="⚙️  Tweak Lab"
                             Click="TweakLab_Click"/>
-                    <Button Content="Cleaner"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="♻️  Cleaner"
                             Click="Cleaner_Click"/>
-                    <Button Content="Hardware"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="▤  Hardware"
                             Click="Hardware_Click"/>
-                    <Button Content="Tools"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="🔧  Tools"
                             Click="Tools_Click"/>
-                    <Button Content="License"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="🔑  License"
                             Click="License_Click"/>
-                    <Button Content="Settings"
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="⚙️  Settings"
                             Click="Settings_Click"/>
-                </StackPanel>
-            </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <!-- MAIN -->
             <Border
                 Grid.Column="1"
                 Margin="20,0,0,0"
@@ -76,7 +141,7 @@
                             x:Name="PageTitle"
                             Text="Dashboard"
                             Foreground="White"
-                            FontSize="26"
+                            FontSize="27"
                             FontWeight="Bold"/>
                         <TextBlock
                             x:Name="PageDescription"
@@ -84,13 +149,19 @@
                             Foreground="#9B9BA1"
                             FontSize="14"
                             Margin="0,5,0,25"/>
+                        <!-- DASHBOARD -->
                         <StackPanel
                             x:Name="DashboardPanel">
-                            <TextBlock
-                                x:Name="SystemInfoText"
-                                Foreground="#C8C8CE"
-                                FontSize="15"
-                                TextWrapping="Wrap"/>
+                            <Border
+                                Background="#22242A"
+                                CornerRadius="10"
+                                Padding="18">
+                                <TextBlock
+                                    x:Name="SystemInfoText"
+                                    Foreground="#D5D5DA"
+                                    FontSize="15"
+                                    TextWrapping="Wrap"/>
+                            </Border>
                             <TextBlock
                                 Text="SYSTEM SCORE"
                                 Foreground="#9B9BA1"
@@ -107,6 +178,7 @@
                                 Margin="0,25,0,10"
                                 Click="MaxFps_Click"/>
                         </StackPanel>
+                        <!-- OTHER PAGES -->
                         <StackPanel
                             x:Name="PagePanel"
                             Visibility="Collapsed">
@@ -114,10 +186,10 @@
                                 x:Name="PageContent"
                                 Foreground="#C8C8CE"
                                 FontSize="16"
-                                TextWrapping="Wrap"/>
+                                TextWrapping="Wrap"
+                                Margin="0,0,0,15"/>
                             <StackPanel
-                                x:Name="ActionPanel"
-                                Margin="0,25,0,0"/>
+                                x:Name="ActionPanel"/>
                         </StackPanel>
                         <TextBlock
                             x:Name="StatusText"

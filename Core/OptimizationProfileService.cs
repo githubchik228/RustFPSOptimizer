@@ -1,0 +1,55 @@
+namespace RustFPSOptimizer.Core;
+public enum OptimizationProfile
+{
+    MaxFps,
+    Competitive,
+    Balanced,
+    Quality
+}
+public class OptimizationProfileService
+{
+    private readonly WindowsTweaks tweaks;
+    public OptimizationProfileService(
+        ChangeTracker tracker)
+    {
+        tweaks = new WindowsTweaks(tracker);
+    }
+    public void Apply(OptimizationProfile profile)
+    {
+        switch (profile)
+        {
+            case OptimizationProfile.MaxFps:
+                ApplyMaxFps();
+                break;
+            case OptimizationProfile.Competitive:
+                ApplyCompetitive();
+                break;
+            case OptimizationProfile.Balanced:
+                ApplyBalanced();
+                break;
+            case OptimizationProfile.Quality:
+                ApplyQuality();
+                break;
+        }
+    }
+    private void ApplyMaxFps()
+    {
+        tweaks.EnableGameMode();
+        tweaks.DisableGameDvr();
+        tweaks.DisableGameDvrPolicy();
+    }
+    private void ApplyCompetitive()
+    {
+        tweaks.EnableGameMode();
+        tweaks.DisableGameDvr();
+        tweaks.DisableGameDvrPolicy();
+    }
+    private void ApplyBalanced()
+    {
+        tweaks.EnableGameMode();
+    }
+    private void ApplyQuality()
+    {
+        tweaks.EnableGameMode();
+    }
+}

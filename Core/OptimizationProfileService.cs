@@ -12,9 +12,12 @@ public class OptimizationProfileService
     public OptimizationProfileService(
         ChangeTracker tracker)
     {
-        tweaks = new WindowsTweaks(tracker);
+        tweaks =
+            new WindowsTweaks(
+                tracker);
     }
-    public void Apply(OptimizationProfile profile)
+    public void Apply(
+        OptimizationProfile profile)
     {
         switch (profile)
         {
@@ -34,15 +37,11 @@ public class OptimizationProfileService
     }
     private void ApplyMaxFps()
     {
-        tweaks.EnableGameMode();
-        tweaks.DisableGameDvr();
-        tweaks.DisableGameDvrPolicy();
+        tweaks.ApplySafeGamingProfile();
     }
     private void ApplyCompetitive()
     {
-        tweaks.EnableGameMode();
-        tweaks.DisableGameDvr();
-        tweaks.DisableGameDvrPolicy();
+        tweaks.ApplySafeGamingProfile();
     }
     private void ApplyBalanced()
     {

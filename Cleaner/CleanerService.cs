@@ -1,21 +1,33 @@
 namespace RustFPSOptimizer.Cleaner;
+public class CleanerResult
+{
+    public int FilesFound { get; set; }
+    public long BytesFound { get; set; }
+    public List<string> Files { get; set; } = new();
+}
 public class CleanerService
 {
-    public long GetDirectorySize(string path)
+    public CleanerResult ScanTempFiles()
     {
-        if (!Directory.Exists(path))
-            return 0;
-        long total = 0;
+        CleanerResult result = new();
+        string temp =
+            Path.GetTempPath();
         try
         {
-            foreach (string file in Directory.EnumerateFiles(
-                         path,
+            foreach (string file in
+                     Directory.EnumerateFiles(
+                         temp,
                          "*",
-                         SearchOption.AllDirectories))
+                         SearchOption.TopDirectoryOnly))
             {
                 try
                 {
-                    total += new FileInfo(file).Length;
+                    FileInfo info =
+                        new(file);
+                    result.FilesFound++;
+                    result.BytesFound +=
+                        info.Length;
+                    result.Files.Add(file);
                 }
                 catch
                 {
@@ -25,16 +37,25 @@ public class CleanerService
         catch
         {
         }
-        return total;
+        return result;
     }
-    public string FormatSize(long bytes)
+    public int Clean(
+        IEnumerable<string> files)
     {
-        if (bytes < 1024)
-            return $"{bytes} B";
-        if (bytes < 1024 * 1024)
-            return $"{bytes / 1024.0:F1} KB";
-        if (bytes < 1024L * 1024L * 1024L)
-            return $"{bytes / 1024.0 / 1024.0:F1} MB";
-        return $"{bytes / 1024.0 / 1024.0 / 1024.0:F2} GB";
+        int deleted = 0;
+        foreach (string file in files)
+        {
+            try
+            {
+                if (!File.Exists(file))
+                    continue;
+                File.Delete(file);
+                deleted++;
+            }
+            catch
+            {
+            }
+        }
+        return deleted;
     }
 }

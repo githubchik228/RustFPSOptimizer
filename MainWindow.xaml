@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <!-- HEADER -->
         <StackPanel Grid.Row="0">
             <TextBlock
                 Text="RUST PERFORMANCE SUITE"
@@ -31,61 +32,117 @@
                 <ColumnDefinition Width="210"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <Button Content="Dashboard"/>
-                <Button Content="Optimize"/>
-                <Button Content="Profiles"/>
-                <Button Content="Rust"/>
-                <Button Content="Benchmark"/>
-                <Button Content="Live Monitor"/>
-                <Button Content="Network"/>
-                <Button Content="Tweak Lab"/>
-                <Button Content="Cleaner"/>
-                <Button Content="Hardware"/>
-                <Button Content="Tools"/>
-                <Button Content="License"/>
-                <Button Content="Settings"/>
-            </StackPanel>
+            <!-- SIDEBAR -->
+            <ScrollViewer
+                Grid.Column="0"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Button
+                        Content="Dashboard"
+                        Click="Dashboard_Click"/>
+                    <Button
+                        Content="Optimize"
+                        Click="Optimize_Click"/>
+                    <Button
+                        Content="Profiles"
+                        Click="Profiles_Click"/>
+                    <Button
+                        Content="Rust"
+                        Click="Rust_Click"/>
+                    <Button
+                        Content="Benchmark"
+                        Click="Benchmark_Click"/>
+                    <Button
+                        Content="Live Monitor"
+                        Click="LiveMonitor_Click"/>
+                    <Button
+                        Content="Network"
+                        Click="Network_Click"/>
+                    <Button
+                        Content="Tweak Lab"
+                        Click="TweakLab_Click"/>
+                    <Button
+                        Content="Cleaner"
+                        Click="Cleaner_Click"/>
+                    <Button
+                        Content="Hardware"
+                        Click="Hardware_Click"/>
+                    <Button
+                        Content="Tools"
+                        Click="Tools_Click"/>
+                    <Button
+                        Content="License"
+                        Click="License_Click"/>
+                    <Button
+                        Content="Settings"
+                        Click="Settings_Click"/>
+                </StackPanel>
+            </ScrollViewer>
+            <!-- CONTENT -->
             <Border
                 Grid.Column="1"
                 Margin="20,0,0,0"
                 Padding="25"
                 Background="#18191E"
                 CornerRadius="12">
-                <StackPanel>
-                    <TextBlock
-                        Text="Dashboard"
-                        Foreground="White"
-                        FontSize="25"
-                        FontWeight="Bold"/>
-                    <TextBlock
-                        x:Name="SystemInfoText"
-                        Text="Loading system information..."
-                        Foreground="#C8C8CE"
-                        FontSize="15"
-                        Margin="0,20,0,20"/>
-                    <TextBlock
-                        Text="SYSTEM SCORE"
-                        Foreground="#9B9BA1"
-                        FontSize="13"/>
-                    <TextBlock
-                        Text="100 / 100"
-                        Foreground="White"
-                        FontSize="38"
-                        FontWeight="Bold"/>
-                    <Button
-                        Content="⚡ ONE CLICK MAX FPS"
-                        Height="55"
-                        FontSize="18"
-                        Margin="0,25,0,10"
-                        Click="MaxFps_Click"/>
-                    <TextBlock
-                        x:Name="StatusText"
-                        Text="Ready"
-                        Foreground="#AFAFB5"
-                        FontSize="14"
-                        Margin="0,15,0,0"/>
-                </StackPanel>
+                <ScrollViewer
+                    VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock
+                            x:Name="PageTitle"
+                            Text="Dashboard"
+                            Foreground="White"
+                            FontSize="25"
+                            FontWeight="Bold"/>
+                        <TextBlock
+                            x:Name="PageDescription"
+                            Text="System overview and optimization status."
+                            Foreground="#9B9BA1"
+                            FontSize="14"
+                            Margin="0,5,0,25"/>
+                        <!-- DASHBOARD -->
+                        <StackPanel x:Name="DashboardPanel">
+                            <TextBlock
+                                x:Name="SystemInfoText"
+                                Text="Loading system information..."
+                                Foreground="#C8C8CE"
+                                FontSize="15"
+                                Margin="0,0,0,20"/>
+                            <TextBlock
+                                Text="SYSTEM SCORE"
+                                Foreground="#9B9BA1"
+                                FontSize="13"/>
+                            <TextBlock
+                                Text="100 / 100"
+                                Foreground="White"
+                                FontSize="38"
+                                FontWeight="Bold"/>
+                            <Button
+                                Content="⚡ ONE CLICK MAX FPS"
+                                Height="55"
+                                FontSize="18"
+                                Margin="0,25,0,10"
+                                Click="MaxFps_Click"/>
+                        </StackPanel>
+                        <!-- OTHER PAGE -->
+                        <StackPanel
+                            x:Name="PagePanel"
+                            Visibility="Collapsed">
+                            <TextBlock
+                                x:Name="PageContent"
+                                Text=""
+                                Foreground="#C8C8CE"
+                                FontSize="16"
+                                TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <TextBlock
+                            x:Name="StatusText"
+                            Text="Ready"
+                            Foreground="#AFAFB5"
+                            FontSize="14"
+                            Margin="0,25,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
     </Grid>

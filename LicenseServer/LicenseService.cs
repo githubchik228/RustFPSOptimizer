@@ -1,156 +1,175 @@
-using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 namespace LicenseServer;
 public class LicenseService
 {
-    private readonly LicenseDb db;
-    public LicenseService(
-        LicenseDb db)
+    private readonly string filePath;
+    private readonly object sync = new();
+    public LicenseService()
     {
-        this.db = db;
-    }
-    public async Task<
-        LicenseActivationResult>
-        ActivateAsync(
-            string key)
-    {
-        ServerLicense? license =
-            await db.Licenses
-                .FirstOrDefaultAsync(
-                    x => x.Key == key.Trim());
-        if (license == null)
-            return Fail(
-                "Invalid license key.");
-        if (license.Revoked)
-            return Fail(
-                "License revoked.");
-        if (IsExpired(license))
-            return Fail(
-                "License expired.");
-        license.LastActivatedAt =
-            DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return new LicenseActivationResult
+        filePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "licenses.txt"
+        );
+        if (!File.Exists(filePath))
         {
-            Success = true,
-            Message = "License activated.",
-            Role = license.Role,
-            ExpiresAt = license.ExpiresAt
-        };
+            File.WriteAllText(filePath, "");
+        }
     }
-    public async Task<
-        LicenseValidationResult>
-        ValidateAsync(
-            string key)
+    public LicenseActivationResult Activate(string key)
     {
-        ServerLicense? license =
-            await db.Licenses
-                .FirstOrDefaultAsync(
-                    x => x.Key == key.Trim());
-        if (license == null)
-            return Invalid(
-                "License not found.");
-        if (license.Revoked)
-            return Invalid(
-                "License revoked.");
-        if (IsExpired(license))
-            return Invalid(
-                "License expired.");
-        return new LicenseValidationResult
+        if (string.IsNullOrWhiteSpace(key))
         {
-            Valid = true,
-            Message = "License active.",
-            Role = license.Role,
-            ExpiresAt = license.ExpiresAt
-        };
+            return new LicenseActivationResult
+            {
+                Success = false,
+                Message = "License key is required."
+            };
+        }
+        lock (sync)
+        {
+            var licenses = Load();
+            var license = licenses.FirstOrDefault(
+                x => x.Key.Equals(
+                    key.Trim(),
+                    StringComparison.OrdinalIgnoreCase)
+            );
+            if (license == null)
+            {
+                return new LicenseActivationResult
+                {
+                    Success = false,
+                    Message = "Invalid license key."
+                };
+            }
+            if (license.ExpiresAt != null &&
+                license.ExpiresAt <= DateTime.UtcNow)
+            {
+                return new LicenseActivationResult
+                {
+                    Success = false,
+                    Message = "License has expired."
+                };
+            }
+            return new LicenseActivationResult
+            {
+                Success = true,
+                Message = "License activated.",
+                ExpiresAt = license.ExpiresAt,
+                Role = license.Role
+            };
+        }
     }
-    public async Task<
-        ServerLicense>
-        CreateAsync(
-            string role,
-            string duration,
-            string createdBy)
+    public LicenseInfo Create(
+        int days,
+        string role = "USER")
     {
-        DateTime now =
-            DateTime.UtcNow;
-        DateTime? expires =
-            duration switch
-            {
-                "OneDay" =>
-                    now.AddDays(1),
-                "SevenDays" =>
-                    now.AddDays(7),
-                "ThirtyDays" =>
-                    now.AddDays(30),
-                "OneYear" =>
-                    now.AddYears(1),
-                "Lifetime" =>
-                    null,
-                _ => throw new ArgumentException(
-                    "Invalid duration.")
-            };
-        ServerLicense license =
-            new()
-            {
-                Key = GenerateKey(),
-                Role = role,
-                Duration = duration,
-                CreatedAt = now,
-                ExpiresAt = expires,
-                CreatedBy = createdBy
-            };
-        db.Licenses.Add(license);
-        await db.SaveChangesAsync();
+        string key = GenerateKey();
+        DateTime? expires = days <= 0
+            ? null
+            : DateTime.UtcNow.AddDays(days);
+        var license = new LicenseInfo
+        {
+            Key = key,
+            Role = role,
+            ExpiresAt = expires
+        };
+        lock (sync)
+        {
+            var licenses = Load();
+            licenses.Add(license);
+            Save(licenses);
+        }
         return license;
     }
-    private static bool IsExpired(
-        ServerLicense license)
+    public List<LicenseInfo> GetAll()
     {
-        return license.ExpiresAt.HasValue &&
-               DateTime.UtcNow >=
-               license.ExpiresAt.Value;
-    }
-    private static LicenseActivationResult
-        Fail(string message)
-    {
-        return new LicenseActivationResult
+        lock (sync)
         {
-            Success = false,
-            Message = message
-        };
+            return Load();
+        }
     }
-    private static LicenseValidationResult
-        Invalid(string message)
+    public bool Delete(string key)
     {
-        return new LicenseValidationResult
+        lock (sync)
         {
-            Valid = false,
-            Message = message
-        };
+            var licenses = Load();
+            var license = licenses.FirstOrDefault(
+                x => x.Key.Equals(
+                    key,
+                    StringComparison.OrdinalIgnoreCase)
+            );
+            if (license == null)
+                return false;
+            licenses.Remove(license);
+            Save(licenses);
+            return true;
+        }
+    }
+    private List<LicenseInfo> Load()
+    {
+        var result = new List<LicenseInfo>();
+        if (!File.Exists(filePath))
+            return result;
+        foreach (string line in File.ReadAllLines(filePath))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+            string[] parts = line.Split('|');
+            if (parts.Length < 3)
+                continue;
+            DateTime? expires = null;
+            if (!string.Equals(
+                    parts[2],
+                    "LIFETIME",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (DateTime.TryParse(
+                    parts[2],
+                    out DateTime parsed))
+                {
+                    expires = parsed;
+                }
+            }
+            result.Add(
+                new LicenseInfo
+                {
+                    Key = parts[0],
+                    Role = parts[1],
+                    ExpiresAt = expires
+                });
+        }
+        return result;
+    }
+    private void Save(List<LicenseInfo> licenses)
+    {
+        var lines = licenses.Select(
+            x =>
+                $"{x.Key}|{x.Role}|" +
+                $"{(x.ExpiresAt.HasValue ? x.ExpiresAt.Value.ToString("O") : "LIFETIME")}"
+        );
+        File.WriteAllLines(filePath, lines);
     }
     private static string GenerateKey()
     {
-        byte[] bytes =
-            RandomNumberGenerator.GetBytes(18);
+        byte[] bytes = RandomNumberGenerator.GetBytes(18);
         string value =
             Convert.ToHexString(bytes);
         return
-            $"UNDEQ-{value[..6]}-" +
+            $"RFO-{value[..6]}-" +
             $"{value[6..12]}-" +
             $"{value[12..18]}";
     }
+}
+public class LicenseInfo
+{
+    public string Key { get; set; } = "";
+    public string Role { get; set; } = "USER";
+    public DateTime? ExpiresAt { get; set; }
 }
 public class LicenseActivationResult
 {
     public bool Success { get; set; }
     public string Message { get; set; } = "";
-    public string? Role { get; set; }
     public DateTime? ExpiresAt { get; set; }
-}
-public class LicenseValidationResult
-{
-    public bool Valid { get; set; }
-    public string Message { get; set; } = "";
-    public string? Role { get; set; }
-    public DateTime? ExpiresAt { get; set; }
+    public string Role { get; set; } = "USER";
 }

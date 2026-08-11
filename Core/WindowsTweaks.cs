@@ -3,7 +3,8 @@ namespace RustFPSOptimizer.Core;
 public class WindowsTweaks
 {
     private readonly ChangeTracker tracker;
-    public WindowsTweaks(ChangeTracker tracker)
+    public WindowsTweaks(
+        ChangeTracker tracker)
     {
         this.tracker = tracker;
     }
@@ -31,13 +32,23 @@ public class WindowsTweaks
             "HistoricalCaptureEnabled",
             0);
     }
+    public void ApplySafeGamingProfile()
+    {
+        EnableGameMode();
+        DisableGameDvr();
+        DisableGameDvrPolicy();
+    }
     private void SetDword(
         RegistryKey root,
         string path,
         string name,
         int value)
     {
-        string original = ReadValue(root, path, name);
+        string original =
+            ReadValue(
+                root,
+                path,
+                name);
         using RegistryKey key =
             root.CreateSubKey(path);
         key.SetValue(
@@ -55,10 +66,18 @@ public class WindowsTweaks
         string path,
         string name)
     {
-        using RegistryKey? key =
-            root.OpenSubKey(path);
-        object? value =
-            key?.GetValue(name);
-        return value?.ToString() ?? "<missing>";
+        try
+        {
+            using RegistryKey? key =
+                root.OpenSubKey(path);
+            object? value =
+                key?.GetValue(name);
+            return value?.ToString()
+                   ?? "<missing>";
+        }
+        catch
+        {
+            return "<missing>";
+        }
     }
 }

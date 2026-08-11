@@ -1,72 +1,81 @@
 using LicenseServer;
-using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
-string database =
-    Environment.GetEnvironmentVariable("LICENSE_DB")
-    ?? "Data Source=licenses.db";
-builder.Services.AddDbContext<LicenseDb>(
-    options =>
-        options.UseSqlite(database));
-builder.Services.AddScoped<LicenseService>();
-builder.Services.AddRateLimiter(options =>
+builder.Services.AddSingleton<LicenseService>();
+var app = builder.Build();
+app.MapGet("/", () =>
 {
-    options.AddFixedWindowLimiter(
-        "license",
-        limiter =>
+    return Results.Ok(new
+    {
+        name = "Rust FPS Optimizer License Server",
+        status = "online",
+        version = "1.0.0"
+    });
+});
+app.MapGet("/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "healthy"
+    });
+});
+app.MapPost("/api/license/activate",
+    (ActivateRequest request,
+     LicenseService service) =>
+{
+    var result =
+        service.Activate(request.Key);
+    return result.Success
+        ? Results.Ok(result)
+        : Results.BadRequest(result);
+});
+app.MapPost("/api/license/create",
+    (CreateRequest request,
+     LicenseService service) =>
+{
+    if (request.Days < 0)
+    {
+        return Results.BadRequest(
+            new
+            {
+                message =
+                    "Days cannot be negative."
+            });
+    }
+    var license =
+        service.Create(
+            request.Days,
+            request.Role);
+    return Results.Ok(license);
+});
+app.MapGet("/api/license/list",
+    (LicenseService service) =>
+{
+    return Results.Ok(
+        service.GetAll());
+});
+app.MapDelete("/api/license/{key}",
+    (string key,
+     LicenseService service) =>
+{
+    bool deleted =
+        service.Delete(key);
+    return deleted
+        ? Results.Ok(new
         {
-            limiter.PermitLimit = 30;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
+            success = true
+        })
+        : Results.NotFound(new
+        {
+            success = false
         });
 });
-var app = builder.Build();
-using (IServiceScope scope = app.Services.CreateScope())
-{
-    LicenseDb db =
-        scope.ServiceProvider
-            .GetRequiredService<LicenseDb>();
-    db.Database.EnsureCreated();
-}
-app.UseRateLimiter();
-app.MapGet("/", () =>
-    Results.Ok(new
-    {
-        service = "Rust Performance Suite License Server",
-        version = "1.0",
-        status = "online"
-    }));
-app.MapGet("/health", () =>
-    Results.Ok(new
-    {
-        status = "healthy",
-        time = DateTime.UtcNow
-    }));
-app.MapPost(
-    "/api/license/activate",
-    async (
-        ActivateRequest request,
-        LicenseService service) =>
-    {
-        LicenseActivationResult result =
-            await service.ActivateAsync(request.Key);
-        return result.Success
-            ? Results.Ok(result)
-            : Results.BadRequest(result);
-    })
-    .RequireRateLimiting("license");
-app.MapPost(
-    "/api/license/validate",
-    async (
-        ValidateRequest request,
-        LicenseService service) =>
-    {
-        LicenseValidationResult result =
-            await service.ValidateAsync(request.Key);
-        return result.Valid
-            ? Results.Ok(result)
-            : Results.BadRequest(result);
-    })
-    .RequireRateLimiting("license");
 app.Run();
-public record ActivateRequest(string Key);
-public record ValidateRequest(string Key);
+public class ActivateRequest
+{
+    public string Key { get; set; } = "";
+}
+public class CreateRequest
+{
+    public int Days { get; set; }
+    public string Role { get; set; } = "USER";
+}

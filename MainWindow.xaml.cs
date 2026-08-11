@@ -18,25 +18,50 @@ public partial class MainWindow : Window
     private readonly BenchmarkService benchmark;
     private readonly CustomProfileManager customProfiles;
     private readonly CleanerService cleaner;
+    private readonly FpsMonitorService fpsMonitor;
+    private readonly RustProfileService rustProfile;
+    private readonly BackupService backup;
+    private readonly OptimizationSafetyService safety;
     private bool liveMonitorEnabled;
     public MainWindow()
     {
         InitializeComponent();
-        optimizationEngine = new OptimizationEngine();
-        systemInfoService = new SystemInfoService();
-        changeTracker = new ChangeTracker();
-        restoreManager = new RestoreManager(changeTracker);
+        optimizationEngine =
+            new OptimizationEngine();
+        systemInfoService =
+            new SystemInfoService();
+        changeTracker =
+            new ChangeTracker();
+        restoreManager =
+            new RestoreManager(
+                changeTracker);
         profileService =
-            new OptimizationProfileService(changeTracker);
-        liveMonitor = new LiveMonitorService();
-        network = new NetworkDiagnostics();
-        benchmark = new BenchmarkService();
-        customProfiles = new CustomProfileManager();
-        cleaner = new CleanerService();
+            new OptimizationProfileService(
+                changeTracker);
+        liveMonitor =
+            new LiveMonitorService();
+        network =
+            new NetworkDiagnostics();
+        benchmark =
+            new BenchmarkService();
+        customProfiles =
+            new CustomProfileManager();
+        cleaner =
+            new CleanerService();
+        fpsMonitor =
+            new FpsMonitorService();
+        rustProfile =
+            new RustProfileService();
+        backup =
+            new BackupService();
+        safety =
+            new OptimizationSafetyService();
         optimizationEngine.LogMessage +=
             OnLogMessage;
         liveMonitor.Updated +=
             OnMonitorUpdated;
+        fpsMonitor.Updated +=
+            OnFpsUpdated;
         SystemInfoText.Text =
             systemInfoService.GetSystemInfo();
     }
@@ -46,10 +71,8 @@ public partial class MainWindow : Window
         string content)
     {
         PageTitle.Text = title;
-        PageDescription.Text =
-            description;
-        PageContent.Text =
-            content;
+        PageDescription.Text = description;
+        PageContent.Text = content;
         DashboardPanel.Visibility =
             Visibility.Collapsed;
         PagePanel.Visibility =
@@ -79,8 +102,8 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Optimize",
-            "Choose an optimization profile.",
-            "Apply a profile to configure supported gaming optimizations.");
+            "Optimization profiles",
+            "Choose a profile to apply.");
         AddActionButton(
             "⚡ MAX FPS",
             () => ApplyProfile(
@@ -94,7 +117,7 @@ public partial class MainWindow : Window
             () => ApplyProfile(
                 OptimizationProfile.Balanced));
         AddActionButton(
-            "↩️ RESTORE ALL CHANGES",
+            "↩️ RESTORE ALL",
             RestoreChanges);
     }
     private void Profiles_Click(
@@ -103,44 +126,36 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Profiles",
-            "Built-in and custom profiles.",
-            "Create your own profile and save it locally.");
+            "Custom optimization profiles",
+            "Create, duplicate, rename and manage your profiles.");
         AddActionButton(
-            "⚡ APPLY MAX FPS",
-            () => ApplyProfile(
-                OptimizationProfile.MaxFps));
-        AddActionButton(
-            "🎯 APPLY COMPETITIVE",
-            () => ApplyProfile(
-                OptimizationProfile.Competitive));
-        AddActionButton(
-            "⚖️ APPLY BALANCED",
-            () => ApplyProfile(
-                OptimizationProfile.Balanced));
-        AddActionButton(
-            "＋ CREATE CUSTOM PROFILE",
+            "＋ CREATE PROFILE",
             CreateCustomProfile);
         AddActionButton(
-            "▣ SHOW CUSTOM PROFILES",
+            "▣ SHOW PROFILES",
             ShowCustomProfiles);
+        AddActionButton(
+            "♻️ RESTORE ALL",
+            RestoreChanges);
     }
     private void Rust_Click(
         object sender,
         RoutedEventArgs e)
     {
-        Rust.RustDetector detector =
-            new();
         bool installed =
-            detector.IsInstalled();
+            rustProfile.IsRustInstalled();
         ShowPage(
             "Rust",
-            "Rust-specific optimization.",
+            "Rust-specific tools",
             installed
-                ? "✓ Rust detected in the default Steam locations."
-                : "✗ Rust was not detected in the default Steam locations.");
+                ? "✓ Rust installation detected."
+                : "✗ Rust installation was not detected.");
         AddActionButton(
             "OPEN RUST FOLDER",
             OpenRustFolder);
+        AddActionButton(
+            "LAUNCH RUST",
+            LaunchRust);
     }
     private void Benchmark_Click(
         object sender,
@@ -148,8 +163,8 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Benchmark",
-            "Performance benchmark.",
-            "The benchmark engine is ready for frametime samples.");
+            "Performance benchmark",
+            "Benchmark engine ready.");
         AddActionButton(
             "▶️ START BENCHMARK",
             StartBenchmark);
@@ -163,7 +178,7 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Live Monitor",
-            "Real-time CPU and RAM monitoring.",
+            "Real-time system monitoring",
             liveMonitorEnabled
                 ? "Live Monitor: ON"
                 : "Live Monitor: OFF");
@@ -180,36 +195,79 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Network",
-            "Ping, jitter and packet-loss testing.",
+            "Ping and network diagnostics",
             "Enter a host or IP address.");
-        TextBox hostBox =
-            new()
+        TextBox host =
+            new TextBox
             {
                 Text = "1.1.1.1",
                 Width = 300
             };
-        ActionPanel.Children.Add(hostBox);
+        ActionPanel.Children.Add(host);
         AddActionButton(
-            "TEST CONNECTION",
+            "TEST NETWORK",
             async () =>
             {
                 StatusText.Text =
-                    "Testing connection...";
-                NetworkTestResult result =
-                    await network.TestAsync(
-                        hostBox.Text);
-                PageContent.Text =
-                    $"Average Ping: {result.AveragePing} ms\n" +
-                    $"Minimum: {result.MinimumPing} ms\n" +
-                    $"Maximum: {result.MaximumPing} ms\n" +
-                    $"Jitter: {result.Jitter:F1} ms\n" +
-                    $"Packet Loss: {result.PacketLoss:F1}%";
-                StatusText.Text =
-                    "Network test complete.";
+                    "Testing...";
+                try
+                {
+                    NetworkTestResult result =
+                        await network.TestAsync(
+                            host.Text);
+                    PageContent.Text =
+                        $"Average Ping: {result.AveragePing:F1} ms\n" +
+                        $"Minimum: {result.MinimumPing} ms\n" +
+                        $"Maximum: {result.MaximumPing} ms\n" +
+                        $"Jitter: {result.Jitter:F1} ms\n" +
+                        $"Packet Loss: {result.PacketLoss:F1}%\n\n" +
+                        $"Packets: " +
+                        $"{result.SuccessfulPackets}/" +
+                        $"{result.TotalPackets}";
+                    StatusText.Text =
+                        "Network test complete.";
+                }
+                catch (Exception ex)
+                {
+                    StatusText.Text =
+                        ex.Message;
+                }
             });
         AddActionButton(
-            "SHOW SERVER REGIONS",
+            "SHOW REGIONS",
             ShowServerRegions);
+    }
+    private void Backup_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        List<BackupItem> items =
+            backup.Load();
+        ShowPage(
+            "Backup Center",
+            "Optimization backup",
+            items.Count == 0
+                ? "No backup entries."
+                : $"Backup contains {items.Count} entries.");
+        AddActionButton(
+            "REFRESH BACKUP",
+            () =>
+            {
+                List<BackupItem> current =
+                    backup.Load();
+                PageContent.Text =
+                    $"Backup entries: {current.Count}";
+            });
+        AddActionButton(
+            "CLEAR BACKUP",
+            () =>
+            {
+                backup.Clear();
+                PageContent.Text =
+                    "Backup cleared.";
+                StatusText.Text =
+                    "Backup cleared.";
+            });
     }
     private void TweakLab_Click(
         object sender,
@@ -217,17 +275,12 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Tweak Lab",
-            "Tracked Windows optimizations.",
-            "Only supported and reversible changes should be applied.");
+            "Safe Windows gaming tweaks",
+            "Changes are tracked so they can be restored.");
         AddActionButton(
-            "APPLY SAFE GAMING PROFILE",
-            () =>
-            {
-                profileService.Apply(
-                    OptimizationProfile.MaxFps);
-                StatusText.Text =
-                    "Safe gaming profile applied.";
-            });
+            "APPLY SAFE PROFILE",
+            () => ApplyProfile(
+                OptimizationProfile.MaxFps));
         AddActionButton(
             "RESTORE ALL",
             RestoreChanges);
@@ -238,10 +291,10 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Cleaner",
-            "Temporary-file cleanup.",
-            "Scan first. Nothing is deleted during scanning.");
+            "Temporary-file cleaner",
+            "Scan before deleting anything.");
         AddActionButton(
-            "SCAN TEMP FILES",
+            "SCAN",
             ScanTempFiles);
     }
     private void Hardware_Click(
@@ -250,8 +303,33 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Hardware",
-            "Detected hardware.",
+            "Hardware information",
             systemInfoService.GetSystemInfo());
+    }
+    private void Safety_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SafetyCheckResult result =
+            safety.Check();
+        string text =
+            result.IsSafeToContinue
+                ? "✓ Basic safety checks passed."
+                : "⚠️ Safety warnings:";
+        if (result.Warnings.Count > 0)
+        {
+            text += "\n\n" +
+                    string.Join(
+                        "\n",
+                        result.Warnings);
+        }
+        text +=
+            $"\n\nAdministrator: " +
+            $"{safety.IsRunningAsAdministrator()}";
+        ShowPage(
+            "Safety",
+            "System safety checks",
+            text);
     }
     private void Tools_Click(
         object sender,
@@ -259,14 +337,14 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Tools",
-            "Performance utilities.",
-            "External utilities can be launched from here.");
+            "External performance utilities",
+            "Official websites:");
         AddActionButton(
-            "OPEN MSI AFTERBURNER WEBSITE",
+            "MSI AFTERBURNER",
             () => OpenUrl(
                 "https://www.msi.com/Landing/afterburner"));
         AddActionButton(
-            "OPEN HWiNFO WEBSITE",
+            "HWiNFO",
             () => OpenUrl(
                 "https://www.hwinfo.com/"));
     }
@@ -276,9 +354,9 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "License",
-            "License management.",
-            "Server-side licensing will be connected here.\n\n" +
-            "Plans:\n" +
+            "License system",
+            "License server will be connected here.\n\n" +
+            "Available durations:\n" +
             "1 Day\n" +
             "7 Days\n" +
             "30 Days\n" +
@@ -291,14 +369,14 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Settings",
-            "Application settings.",
+            "Application settings",
             liveMonitorEnabled
-                ? "Live Monitor is currently ON."
-                : "Live Monitor is currently OFF.");
+                ? "Live Monitor is ON."
+                : "Live Monitor is OFF.");
         AddActionButton(
             liveMonitorEnabled
-                ? "■ DISABLE LIVE MONITOR"
-                : "▶️ ENABLE LIVE MONITOR",
+                ? "■ DISABLE MONITOR"
+                : "▶️ ENABLE MONITOR",
             ToggleLiveMonitor);
     }
     private void MaxFps_Click(
@@ -311,27 +389,39 @@ public partial class MainWindow : Window
     private void ApplyProfile(
         OptimizationProfile profile)
     {
+        SafetyCheckResult check =
+            safety.Check();
+        if (!check.IsSafeToContinue)
+        {
+            StatusText.Text =
+                "Safety check failed.";
+            return;
+        }
         try
         {
             optimizationEngine.Start();
             profileService.Apply(profile);
+            OptimizationStatus.Text =
+                profile.ToString();
             StatusText.Text =
-                $"✓ {profile} profile applied.";
+                $"✓ {profile} applied.";
         }
         catch (Exception ex)
         {
             StatusText.Text =
-                $"Optimization error: {ex.Message}";
+                $"Error: {ex.Message}";
         }
     }
     private void RestoreChanges()
     {
         try
         {
-            int restored =
+            int count =
                 restoreManager.RestoreAll();
+            OptimizationStatus.Text =
+                "Restored";
             StatusText.Text =
-                $"✓ Restored {restored} changes.";
+                $"✓ Restored {count} changes.";
         }
         catch (Exception ex)
         {
@@ -342,7 +432,7 @@ public partial class MainWindow : Window
     private void CreateCustomProfile()
     {
         Window window =
-            new()
+            new Window
             {
                 Title = "Create Custom Profile",
                 Width = 450,
@@ -351,40 +441,39 @@ public partial class MainWindow : Window
                     WindowStartupLocation.CenterOwner,
                 Owner = this,
                 Background =
-                    System.Windows.Media.Brushes
-                        .DimGray
+                    System.Windows.Media.Brushes.DimGray
             };
         StackPanel panel =
-            new()
+            new StackPanel
             {
                 Margin =
                     new Thickness(20)
             };
-        TextBox nameBox =
-            new()
+        TextBox name =
+            new TextBox
             {
                 Text = "My Rust Profile"
             };
         CheckBox gameMode =
-            new()
+            new CheckBox
             {
                 Content = "Enable Game Mode",
                 IsChecked = true
             };
-        CheckBox gameDvr =
-            new()
+        CheckBox dvr =
+            new CheckBox
             {
                 Content = "Disable Game DVR",
                 IsChecked = true
             };
-        CheckBox gameDvrPolicy =
-            new()
+        CheckBox policy =
+            new CheckBox
             {
                 Content = "Disable Game DVR Policy",
                 IsChecked = true
             };
         Button save =
-            new()
+            new Button
             {
                 Content = "SAVE PROFILE"
             };
@@ -395,28 +484,29 @@ public partial class MainWindow : Window
                 Foreground =
                     System.Windows.Media.Brushes.White
             });
-        panel.Children.Add(nameBox);
+        panel.Children.Add(name);
         panel.Children.Add(gameMode);
-        panel.Children.Add(gameDvr);
-        panel.Children.Add(gameDvrPolicy);
+        panel.Children.Add(dvr);
+        panel.Children.Add(policy);
         panel.Children.Add(save);
         save.Click += (_, _) =>
         {
-            CustomProfile profile =
-                new()
+            if (string.IsNullOrWhiteSpace(name.Text))
+                return;
+            customProfiles.Add(
+                new CustomProfile
                 {
-                    Name = nameBox.Text,
+                    Name = name.Text,
                     GameMode =
                         gameMode.IsChecked == true,
                     DisableGameDvr =
-                        gameDvr.IsChecked == true,
+                        dvr.IsChecked == true,
                     DisableGameDvrPolicy =
-                        gameDvrPolicy.IsChecked == true
-                };
-            customProfiles.Add(profile);
+                        policy.IsChecked == true
+                });
             window.Close();
             StatusText.Text =
-                $"✓ Profile '{profile.Name}' saved.";
+                $"✓ Profile '{name.Text}' saved.";
         };
         window.Content = panel;
         window.ShowDialog();
@@ -426,18 +516,18 @@ public partial class MainWindow : Window
         if (customProfiles.Profiles.Count == 0)
         {
             PageContent.Text =
-                "No custom profiles created yet.";
+                "No custom profiles.";
             return;
         }
         PageContent.Text =
             string.Join(
                 "\n\n",
                 customProfiles.Profiles.Select(
-                    x =>
-                        $"• {x.Name}\n" +
-                        $"  Created: {x.CreatedAt:g}\n" +
-                        $"  Game Mode: {x.GameMode}\n" +
-                        $"  Game DVR disabled: {x.DisableGameDvr}"));
+                    p =>
+                        $"• {p.Name}\n" +
+                        $"Game Mode: {p.GameMode}\n" +
+                        $"Game DVR: {p.DisableGameDvr}\n" +
+                        $"DVR Policy: {p.DisableGameDvrPolicy}"));
     }
     private void StartBenchmark()
     {
@@ -448,20 +538,15 @@ public partial class MainWindow : Window
     private void StopBenchmark()
     {
         if (!benchmark.IsRunning)
-        {
-            StatusText.Text =
-                "Benchmark is not running.";
             return;
-        }
         BenchmarkResult result =
             benchmark.Stop();
         PageContent.Text =
-            $"Benchmark result\n\n" +
             $"Average FPS: {result.AverageFps:F1}\n" +
             $"1% Low: {result.OnePercentLow:F1}\n" +
             $"0.1% Low: {result.ZeroPointOnePercentLow:F1}\n" +
-            $"Average Frame Time: {result.AverageFrameTimeMs:F2} ms\n" +
-            $"Duration: {result.Duration.TotalSeconds:F1} sec";
+            $"Frame Time: {result.AverageFrameTimeMs:F2} ms\n" +
+            $"Duration: {result.Duration.TotalSeconds:F1}s";
         StatusText.Text =
             "Benchmark completed.";
     }
@@ -469,18 +554,15 @@ public partial class MainWindow : Window
     {
         liveMonitorEnabled = true;
         liveMonitor.Start();
-        PageContent.Text =
-            "Live Monitor: ON\n\n" +
-            "Waiting for measurements...";
         StatusText.Text =
-            "Live Monitor enabled.";
+            "Live Monitor ON.";
     }
     private void StopLiveMonitor()
     {
         liveMonitorEnabled = false;
         liveMonitor.Stop();
         StatusText.Text =
-            "Live Monitor disabled.";
+            "Live Monitor OFF.";
     }
     private void ToggleLiveMonitor()
     {
@@ -497,11 +579,23 @@ public partial class MainWindow : Window
             if (!liveMonitorEnabled)
                 return;
             PageContent.Text =
-                $"Live Monitor: ON\n\n" +
+                $"LIVE MONITOR\n\n" +
                 $"CPU: {data.CpuUsage:F1}%\n" +
                 $"RAM: {data.RamUsedGb:F1} / {data.RamTotalGb:F1} GB\n" +
-                $"RAM usage: {data.RamUsage:F1}%\n\n" +
+                $"RAM Usage: {data.RamUsage:F1}%\n\n" +
                 $"Updated: {data.Time:HH:mm:ss}";
+        });
+    }
+    private void OnFpsUpdated(
+        FpsMonitorData data)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            PageContent.Text =
+                $"FPS: {data.Fps:F1}\n" +
+                $"Frame Time: {data.FrameTimeMs:F2} ms\n" +
+                $"1% Low: {data.OnePercentLow:F1}\n" +
+                $"0.1% Low: {data.ZeroPointOnePercentLow:F1}";
         });
     }
     private void ShowServerRegions()
@@ -510,10 +604,10 @@ public partial class MainWindow : Window
             string.Join(
                 "\n\n",
                 ServerList.Servers.Select(
-                    x =>
-                        $"{x.Region}\n" +
-                        $"{x.Name}\n" +
-                        $"{x.Address}"));
+                    s =>
+                        $"{s.Region}\n" +
+                        $"{s.Name}\n" +
+                        $"{s.Address}"));
     }
     private void ScanTempFiles()
     {
@@ -526,33 +620,28 @@ public partial class MainWindow : Window
         PageContent.Text =
             $"Files found: {result.FilesFound}\n" +
             $"Potential cleanup: {mb:F1} MB";
-        if (result.Files.Count == 0)
+        if (result.Files.Count > 0)
         {
-            StatusText.Text =
-                "Nothing to clean.";
-            return;
+            AddActionButton(
+                "DELETE SCANNED FILES",
+                () =>
+                {
+                    int deleted =
+                        cleaner.Clean(
+                            result.Files);
+                    StatusText.Text =
+                        $"Deleted {deleted} files.";
+                });
         }
-        AddActionButton(
-            "DELETE SCANNED TEMP FILES",
-            () =>
-            {
-                int deleted =
-                    cleaner.Clean(
-                        result.Files);
-                StatusText.Text =
-                    $"Deleted {deleted} files.";
-            });
     }
     private void OpenRustFolder()
     {
-        Rust.RustDetector detector =
-            new();
         string? path =
-            detector.FindRust();
+            rustProfile.FindRustExecutable();
         if (string.IsNullOrWhiteSpace(path))
         {
             StatusText.Text =
-                "Rust installation not found.";
+                "Rust not found.";
             return;
         }
         string? directory =
@@ -567,6 +656,13 @@ public partial class MainWindow : Window
                     $"\"{directory}\"",
                 UseShellExecute = true
             });
+    }
+    private void LaunchRust()
+    {
+        StatusText.Text =
+            rustProfile.LaunchRust()
+                ? "Rust launched."
+                : "Unable to launch Rust.";
     }
     private static void OpenUrl(
         string url)
@@ -583,7 +679,7 @@ public partial class MainWindow : Window
         Action action)
     {
         Button button =
-            new()
+            new Button
             {
                 Content = text,
                 Height = 45,
@@ -592,9 +688,19 @@ public partial class MainWindow : Window
                 FontSize = 15
             };
         button.Click +=
-            (_, _) => action();
-        ActionPanel.Children.Add(
-            button);
+            (_, _) =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    StatusText.Text =
+                        $"Error: {ex.Message}";
+                }
+            };
+        ActionPanel.Children.Add(button);
     }
     private void OnLogMessage(
         string message)
@@ -609,6 +715,7 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         liveMonitor.Dispose();
+        fpsMonitor.Dispose();
         base.OnClosed(e);
     }
 }

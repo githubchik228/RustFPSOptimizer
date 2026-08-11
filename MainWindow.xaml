@@ -20,8 +20,8 @@
             <Setter Property="FontSize" Value="14"/>
         </Style>
         <Style x:Key="SidebarButton"
-               TargetType="Button"
-               BasedOn="{StaticResource {x:Type Button}}">
+                TargetType="Button"
+                BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="HorizontalContentAlignment"
                     Value="Left"/>
             <Setter Property="Height" Value="46"/>
@@ -102,6 +102,10 @@
                             Click="Network_Click"/>
                         <Button
                             Style="{StaticResource SidebarButton}"
+                            Content="♜  Backup"
+                            Click="Backup_Click"/>
+                        <Button
+                            Style="{StaticResource SidebarButton}"
                             Content="⚙️  Tweak Lab"
                             Click="TweakLab_Click"/>
                         <Button
@@ -112,6 +116,10 @@
                             Style="{StaticResource SidebarButton}"
                             Content="▤  Hardware"
                             Click="Hardware_Click"/>
+                        <Button
+                            Style="{StaticResource SidebarButton}"
+                            Content="🛡️  Safety"
+                            Click="Safety_Click"/>
                         <Button
                             Style="{StaticResource SidebarButton}"
                             Content="🔧  Tools"
@@ -163,13 +171,14 @@
                                     TextWrapping="Wrap"/>
                             </Border>
                             <TextBlock
-                                Text="SYSTEM SCORE"
+                                Text="OPTIMIZATION"
                                 Foreground="#9B9BA1"
                                 Margin="0,25,0,0"/>
                             <TextBlock
-                                Text="100 / 100"
+                                x:Name="OptimizationStatus"
+                                Text="Ready"
                                 Foreground="White"
-                                FontSize="38"
+                                FontSize="25"
                                 FontWeight="Bold"/>
                             <Button
                                 Content="⚡ ONE CLICK MAX FPS"

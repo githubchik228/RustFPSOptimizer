@@ -15,7 +15,9 @@ public class CustomProfileManager
             "RustPerformanceSuite_by_undeq",
             "Profiles");
         filePath =
-            Path.Combine(directory, "custom_profiles.json");
+            Path.Combine(
+                directory,
+                "custom_profiles.json");
         Directory.CreateDirectory(directory);
         Load();
     }
@@ -29,11 +31,7 @@ public class CustomProfileManager
     public bool Remove(string name)
     {
         CustomProfile? profile =
-            profiles.FirstOrDefault(
-                x => string.Equals(
-                    x.Name,
-                    name,
-                    StringComparison.OrdinalIgnoreCase));
+            Get(name);
         if (profile == null)
             return false;
         profiles.Remove(profile);
@@ -48,19 +46,86 @@ public class CustomProfileManager
                 name,
                 StringComparison.OrdinalIgnoreCase));
     }
-    public void Replace(CustomProfile profile)
+    public bool Rename(
+        string oldName,
+        string newName)
     {
-        CustomProfile? existing =
-            Get(profile.Name);
-        if (existing == null)
-        {
-            Add(profile);
-            return;
-        }
-        int index =
-            profiles.IndexOf(existing);
-        profiles[index] = profile;
+        CustomProfile? profile =
+            Get(oldName);
+        if (profile == null ||
+            string.IsNullOrWhiteSpace(newName))
+            return false;
+        if (Get(newName) != null)
+            return false;
+        profile.Name = newName;
         Save();
+        return true;
+    }
+    public CustomProfile? Duplicate(
+        string name,
+        string newName)
+    {
+        CustomProfile? original =
+            Get(name);
+        if (original == null ||
+            string.IsNullOrWhiteSpace(newName) ||
+            Get(newName) != null)
+            return null;
+        CustomProfile copy =
+            new()
+            {
+                Name = newName,
+                GameMode =
+                    original.GameMode,
+                DisableGameDvr =
+                    original.DisableGameDvr,
+                DisableGameDvrPolicy =
+                    original.DisableGameDvrPolicy,
+                CleanTempFiles =
+                    original.CleanTempFiles,
+                CreatedAt =
+                    DateTime.Now
+            };
+        profiles.Add(copy);
+        Save();
+        return copy;
+    }
+    public void Export(
+        string name,
+        string destination)
+    {
+        CustomProfile? profile =
+            Get(name);
+        if (profile == null)
+            throw new InvalidOperationException(
+                "Profile not found.");
+        string json =
+            JsonSerializer.Serialize(
+                profile,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+        File.WriteAllText(
+            destination,
+            json);
+    }
+    public CustomProfile Import(
+        string file)
+    {
+        string json =
+            File.ReadAllText(file);
+        CustomProfile? profile =
+            JsonSerializer.Deserialize<CustomProfile>(
+                json);
+        if (profile == null)
+            throw new InvalidOperationException(
+                "Invalid profile file.");
+        if (Get(profile.Name) != null)
+            profile.Name += " Copy";
+        profiles.Add(profile);
+        Save();
+        return profile;
     }
     private void Load()
     {

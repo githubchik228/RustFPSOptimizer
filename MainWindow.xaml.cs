@@ -1,17 +1,42 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using RustFPSOptimizer.Core;
+using RustFPSOptimizer.Network;
 namespace RustFPSOptimizer;
 public partial class MainWindow : Window
 {
     private readonly OptimizationEngine optimizationEngine;
     private readonly SystemInfoService systemInfoService;
+    private readonly ChangeTracker changeTracker;
+    private readonly RestoreManager restoreManager;
+    private readonly OptimizationProfileService profileService;
+    private readonly LiveMonitorService liveMonitor;
+    private readonly NetworkDiagnostics network;
+    private bool liveMonitorEnabled;
     public MainWindow()
     {
         InitializeComponent();
-        optimizationEngine = new OptimizationEngine();
-        systemInfoService = new SystemInfoService();
-        optimizationEngine.LogMessage += OnLogMessage;
+        optimizationEngine =
+            new OptimizationEngine();
+        systemInfoService =
+            new SystemInfoService();
+        changeTracker =
+            new ChangeTracker();
+        restoreManager =
+            new RestoreManager(
+                changeTracker);
+        profileService =
+            new OptimizationProfileService(
+                changeTracker);
+        liveMonitor =
+            new LiveMonitorService();
+        network =
+            new NetworkDiagnostics();
+        optimizationEngine.LogMessage +=
+            OnLogMessage;
+        liveMonitor.Updated +=
+            OnMonitorUpdated;
         SystemInfoText.Text =
             systemInfoService.GetSystemInfo();
     }
@@ -27,6 +52,7 @@ public partial class MainWindow : Window
             Visibility.Collapsed;
         PagePanel.Visibility =
             Visibility.Visible;
+        ActionPanel.Children.Clear();
         StatusText.Text =
             $"{title} opened.";
     }
@@ -41,7 +67,8 @@ public partial class MainWindow : Window
             Visibility.Visible;
         PagePanel.Visibility =
             Visibility.Collapsed;
-        StatusText.Text = "Dashboard opened.";
+        StatusText.Text =
+            "Dashboard opened.";
     }
     private void Optimize_Click(
         object sender,
@@ -49,12 +76,23 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Optimize",
-            "Optimize Windows and Rust for better performance.",
-            "Optimization profiles will be available here.\n\n" +
-            "MAX FPS\n" +
-            "COMPETITIVE\n" +
-            "BALANCED\n\n" +
-            "Backup and rollback will be performed before applying changes.");
+            "Choose an optimization profile.",
+            "Every supported change is tracked so it can be restored.");
+        AddActionButton(
+            "⚡ MAX FPS",
+            () => ApplyProfile(
+                OptimizationProfile.MaxFps));
+        AddActionButton(
+            "🎯 COMPETITIVE",
+            () => ApplyProfile(
+                OptimizationProfile.Competitive));
+        AddActionButton(
+            "⚖️ BALANCED",
+            () => ApplyProfile(
+                OptimizationProfile.Balanced));
+        AddActionButton(
+            "↩️ RESTORE CHANGES",
+            RestoreChanges);
     }
     private void Profiles_Click(
         object sender,
@@ -62,13 +100,20 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Profiles",
-            "Manage optimization profiles.",
-            "Built-in profiles:\n\n" +
-            "• MAX FPS\n" +
-            "• Competitive\n" +
-            "• Balanced\n" +
-            "• Quality\n\n" +
-            "Custom profiles will be added here.");
+            "Built-in and custom profiles.",
+            "Custom profile editor will be expanded here.");
+        AddActionButton(
+            "⚡ MAX FPS",
+            () => ApplyProfile(
+                OptimizationProfile.MaxFps));
+        AddActionButton(
+            "🎯 COMPETITIVE",
+            () => ApplyProfile(
+                OptimizationProfile.Competitive));
+        AddActionButton(
+            "⚖️ BALANCED",
+            () => ApplyProfile(
+                OptimizationProfile.Balanced));
     }
     private void Rust_Click(
         object sender,
@@ -77,7 +122,13 @@ public partial class MainWindow : Window
         ShowPage(
             "Rust",
             "Rust-specific optimization.",
-            "Rust detection and game-specific settings will be available here.");
+            "Rust detection:");
+        Rust.RustDetector detector =
+            new();
+        PageContent.Text +=
+            detector.IsInstalled()
+                ? "\n\n✓ Rust detected."
+                : "\n\n✗ Rust was not detected in the default Steam locations.";
     }
     private void Benchmark_Click(
         object sender,
@@ -85,12 +136,15 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Benchmark",
-            "Measure performance before and after optimization.",
-            "Benchmark system coming next.\n\n" +
-            "FPS\n" +
-            "1% LOW\n" +
-            "0.1% LOW\n" +
-            "Frame time");
+            "Performance testing.",
+            "Benchmark system will measure FPS, frame time and low-percentile performance.");
+        AddActionButton(
+            "START BENCHMARK",
+            () =>
+            {
+                StatusText.Text =
+                    "Benchmark preparation started.";
+            });
     }
     private void LiveMonitor_Click(
         object sender,
@@ -98,15 +152,14 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Live Monitor",
-            "Real-time system monitoring.",
-            "Live Monitor will display:\n\n" +
-            "CPU usage\n" +
-            "GPU usage\n" +
-            "RAM usage\n" +
-            "Temperatures\n" +
-            "FPS\n" +
-            "Frame time\n\n" +
-            "ON / OFF control will be added.");
+            "Real-time CPU and RAM monitoring.",
+            "Live monitoring is currently OFF.");
+        AddActionButton(
+            "▶️ START MONITOR",
+            StartLiveMonitor);
+        AddActionButton(
+            "■ STOP MONITOR",
+            StopLiveMonitor);
     }
     private void Network_Click(
         object sender,
@@ -114,12 +167,34 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Network",
-            "Test ping, jitter and packet loss.",
-            "Network diagnostics coming next.\n\n" +
-            "Ping\n" +
-            "Jitter\n" +
-            "Packet Loss\n\n" +
-            "Rust server testing will be added.");
+            "Ping, jitter and packet-loss testing.",
+            "Enter a hostname/IP below and run a test.");
+        TextBox hostBox =
+            new()
+            {
+                Text = "1.1.1.1",
+                Margin = new Thickness(5),
+                Padding = new Thickness(8)
+            };
+        ActionPanel.Children.Add(hostBox);
+        AddActionButton(
+            "TEST CONNECTION",
+            async () =>
+            {
+                StatusText.Text =
+                    "Testing connection...";
+                NetworkTestResult result =
+                    await network.TestAsync(
+                        hostBox.Text);
+                PageContent.Text =
+                    $"Average Ping: {result.AveragePing} ms\n" +
+                    $"Minimum: {result.MinimumPing} ms\n" +
+                    $"Maximum: {result.MaximumPing} ms\n" +
+                    $"Jitter: {result.Jitter:F1} ms\n" +
+                    $"Packet Loss: {result.PacketLoss:F1}%";
+                StatusText.Text =
+                    "Network test complete.";
+            });
     }
     private void TweakLab_Click(
         object sender,
@@ -127,9 +202,11 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Tweak Lab",
-            "Advanced Windows optimization tweaks.",
-            "Advanced tweaks will appear here.\n\n" +
-            "Every modification will be backed up and tracked.");
+            "Advanced optimization tweaks.",
+            "Only tracked and reversible tweaks should be added here.");
+        AddActionButton(
+            "RESTORE ALL CHANGES",
+            RestoreChanges);
     }
     private void Cleaner_Click(
         object sender,
@@ -137,8 +214,8 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Cleaner",
-            "Clean safe temporary files.",
-            "Cleaner will scan temporary files and show exactly what can be removed before cleaning.");
+            "Safe temporary-file cleanup.",
+            "Cleaner will scan before deleting anything.");
     }
     private void Hardware_Click(
         object sender,
@@ -146,7 +223,7 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Hardware",
-            "Detailed hardware information.",
+            "Detected hardware.",
             systemInfoService.GetSystemInfo());
     }
     private void Tools_Click(
@@ -155,12 +232,8 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Tools",
-            "Useful performance utilities.",
-            "Tools will include shortcuts for supported utilities such as:\n\n" +
-            "MSI Afterburner\n" +
-            "HWiNFO\n" +
-            "GPU-Z\n" +
-            "CapFrameX");
+            "External performance utilities.",
+            "Tool shortcuts will be added here.");
     }
     private void License_Click(
         object sender,
@@ -168,14 +241,14 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "License",
-            "Manage your Rust Performance Suite license.",
-            "License system will support:\n\n" +
-            "1 DAY\n" +
-            "7 DAYS\n" +
-            "30 DAYS\n" +
-            "1 YEAR\n" +
-            "LIFETIME\n\n" +
-            "OWNER / ADMIN / HELPER / USER roles will be added.");
+            "License management.",
+            "License server integration will be connected here.\n\n" +
+            "Plans:\n" +
+            "1 Day\n" +
+            "7 Days\n" +
+            "30 Days\n" +
+            "1 Year\n" +
+            "Lifetime");
     }
     private void Settings_Click(
         object sender,
@@ -183,29 +256,121 @@ public partial class MainWindow : Window
     {
         ShowPage(
             "Settings",
-            "Configure Rust Performance Suite.",
-            "Settings coming next.\n\n" +
-            "Live Monitor: ON / OFF\n" +
-            "Start with Windows\n" +
-            "Notifications\n" +
-            "Theme\n" +
-            "Language");
+            "Program settings.",
+            "Live Monitor can be enabled or disabled.");
+        AddActionButton(
+            liveMonitorEnabled
+                ? "■ DISABLE LIVE MONITOR"
+                : "▶️ ENABLE LIVE MONITOR",
+            ToggleLiveMonitor);
     }
     private void MaxFps_Click(
         object sender,
         RoutedEventArgs e)
     {
-        optimizationEngine.Start();
-        optimizationEngine.ApplyMaxFps();
+        ApplyProfile(
+            OptimizationProfile.MaxFps);
+    }
+    private void ApplyProfile(
+        OptimizationProfile profile)
+    {
+        try
+        {
+            optimizationEngine.Start();
+            profileService.Apply(profile);
+            StatusText.Text =
+                $"✓ {profile} profile applied.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text =
+                $"Optimization error: {ex.Message}";
+        }
+    }
+    private void RestoreChanges()
+    {
+        try
+        {
+            int restored =
+                restoreManager.RestoreAll();
+            StatusText.Text =
+                $"✓ Restored {restored} optimizer changes.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text =
+                $"Restore error: {ex.Message}";
+        }
+    }
+    private void StartLiveMonitor()
+    {
+        liveMonitorEnabled = true;
+        liveMonitor.Start();
+        PageContent.Text =
+            "Live Monitor: ON\n\n" +
+            "Waiting for measurements...";
         StatusText.Text =
-            "MAX FPS profile selected.";
+            "Live Monitor enabled.";
+    }
+    private void StopLiveMonitor()
+    {
+        liveMonitorEnabled = false;
+        liveMonitor.Stop();
+        StatusText.Text =
+            "Live Monitor disabled.";
+    }
+    private void ToggleLiveMonitor()
+    {
+        if (liveMonitorEnabled)
+            StopLiveMonitor();
+        else
+            StartLiveMonitor();
+    }
+    private void OnMonitorUpdated(
+        LiveMonitorData data)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (!liveMonitorEnabled)
+                return;
+            PageContent.Text =
+                $"Live Monitor: ON\n\n" +
+                $"CPU: {data.CpuUsage:F1}%\n" +
+                $"RAM: {data.RamUsedGb:F1} / {data.RamTotalGb:F1} GB\n" +
+                $"RAM usage: {data.RamUsage:F1}%\n\n" +
+                $"Updated: {data.Time:HH:mm:ss}";
+        });
+    }
+    private void AddActionButton(
+        string text,
+        Action action)
+    {
+        Button button =
+            new()
+            {
+                Content = text,
+                Height = 45,
+                Margin = new Thickness(5),
+                FontSize = 15
+            };
+        button.Click +=
+            (_, _) => action();
+        ActionPanel.Children.Add(
+            button);
     }
     private void OnLogMessage(
         string message)
     {
         Dispatcher.Invoke(() =>
         {
-            StatusText.Text = message;
+            StatusText.Text =
+                message;
         });
+    }
+    protected override void OnClosed(
+        EventArgs e)
+    {
+        liveMonitor.Dispose();
+        base.OnClosed(e);
     }
 }

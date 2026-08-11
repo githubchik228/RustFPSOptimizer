@@ -6,7 +6,6 @@ public class LiveMonitorData
     public double RamUsage { get; set; }
     public double RamUsedGb { get; set; }
     public double RamTotalGb { get; set; }
-    public double GpuUsage { get; set; }
     public DateTime Time { get; set; }
 }
 public class LiveMonitorService : IDisposable
@@ -55,6 +54,8 @@ public class LiveMonitorService : IDisposable
     }
     private void Update(object? state)
     {
+        if (!IsRunning)
+            return;
         try
         {
             double cpu =
@@ -64,7 +65,9 @@ public class LiveMonitorService : IDisposable
             double totalRam =
                 GC.GetGCMemoryInfo()
                     .TotalAvailableMemoryBytes /
-                1024.0 / 1024.0 / 1024.0;
+                1024.0 /
+                1024.0 /
+                1024.0;
             double usedRam =
                 totalRam * ram / 100.0;
             Updated?.Invoke(

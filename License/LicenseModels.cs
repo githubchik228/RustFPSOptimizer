@@ -1,70 +1,61 @@
-namespace RustFPSOptimizer.License;
+using System;
 
-public enum LicenseDuration
+namespace RustFPSOptimizer.License
 {
-    OneDay = 1,
-    SevenDays = 7,
-    ThirtyDays = 30,
-    OneYear = 365,
-    Lifetime = 0
-}
+    public enum LicenseRole
+    {
+        User,
+        Admin
+    }
 
-public class LicenseKey
-{
-    public string Key { get; set; } = string.Empty;
-    public LicenseDuration Duration { get; set; }
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? ExpiresAt { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
+    public class LicenseKey
+    {
+        public string Key { get; set; } = string.Empty;
+        public LicenseRole Role { get; set; } = LicenseRole.User;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ExpiresAt { get; set; }
+    }
 
-    public bool IsLifetime =>
-        Duration == LicenseDuration.Lifetime;
+    public class LicenseSession
+    {
+        public string Key { get; set; } = string.Empty;
+        public LicenseRole Role { get; set; } = LicenseRole.User;
+        public DateTime ActivatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ExpiresAt { get; set; }
 
-    public bool IsExpired =>
-        !IsLifetime &&
-        ExpiresAt.HasValue &&
-        ExpiresAt.Value <= DateTime.UtcNow;
-}
+        public bool IsLifetime =>
+            !ExpiresAt.HasValue;
 
-public class LicenseSession
-{
-    public string Key { get; set; } = string.Empty;
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-    public DateTime ActivatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? ExpiresAt { get; set; }
+        public bool IsExpired =>
+            ExpiresAt.HasValue &&
+            ExpiresAt.Value <= DateTime.UtcNow;
+    }
 
-    public bool IsLifetime =>
-        !ExpiresAt.HasValue;
+    public class LicenseActivationResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public LicenseRole Role { get; set; } = LicenseRole.User;
+        public DateTime? ExpiresAt { get; set; }
+    }
 
-    public bool IsExpired =>
-        ExpiresAt.HasValue &&
-        ExpiresAt.Value <= DateTime.UtcNow;
-}
+    public class LicenseValidationResult
+    {
+        public bool Valid { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public LicenseRole Role { get; set; } = LicenseRole.User;
+        public DateTime? ExpiresAt { get; set; }
+    }
 
-public class LicenseActivationResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-    public DateTime? ExpiresAt { get; set; }
-}
+    public class LicenseCreateRequest
+    {
+        public int Days { get; set; }
 
-public class LicenseValidationResult
-{
-    public bool Valid { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-    public DateTime? ExpiresAt { get; set; }
-}
+        public LicenseRole Role { get; set; } = LicenseRole.User;
+    }
 
-public class LicenseCreateRequest
-{
-    public int Days { get; set; }
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-}
-
-public class LicenseActivateRequest
-{
-    public string Key { get; set; } = string.Empty;
+    public class LicenseActivateRequest
+    {
+        public string Key { get; set; } = string.Empty;
+    }
 }

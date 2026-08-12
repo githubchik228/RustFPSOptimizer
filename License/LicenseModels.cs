@@ -12,15 +12,10 @@ public enum LicenseDuration
 public class LicenseKey
 {
     public string Key { get; set; } = string.Empty;
-
     public LicenseDuration Duration { get; set; }
-
     public LicenseRole Role { get; set; } = LicenseRole.User;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime? ExpiresAt { get; set; }
-
     public string CreatedBy { get; set; } = string.Empty;
 
     public bool IsLifetime =>
@@ -35,11 +30,8 @@ public class LicenseKey
 public class LicenseSession
 {
     public string Key { get; set; } = string.Empty;
-
     public LicenseRole Role { get; set; } = LicenseRole.User;
-
     public DateTime ActivatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime? ExpiresAt { get; set; }
 
     public bool IsLifetime =>
@@ -53,22 +45,16 @@ public class LicenseSession
 public class LicenseActivationResult
 {
     public bool Success { get; set; }
-
     public string Message { get; set; } = string.Empty;
-
     public LicenseRole Role { get; set; } = LicenseRole.User;
-
     public DateTime? ExpiresAt { get; set; }
 }
 
 public class LicenseValidationResult
 {
     public bool Valid { get; set; }
-
     public string Message { get; set; } = string.Empty;
-
     public LicenseRole Role { get; set; } = LicenseRole.User;
-
     public DateTime? ExpiresAt { get; set; }
 }
 

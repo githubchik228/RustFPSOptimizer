@@ -175,18 +175,3 @@ public class LicenseManager
         CurrentSession = null;
         storage.ClearSession();
     }
-}
-public class LicenseActivationResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = "";
-    public LicenseRole Role { get; set; }
-    public DateTime? ExpiresAt { get; set; }
-}
-public class LicenseValidationResult
-{
-    public bool Valid { get; set; }
-    public string Message { get; set; } = "";
-    public LicenseRole Role { get; set; }
-    public DateTime? ExpiresAt { get; set; }
-}

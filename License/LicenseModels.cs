@@ -72,17 +72,3 @@ public class LicenseDuration
 
     public DateTime? ExpiresAt { get; set; }
 }
-
-public class LicenseInfo
-{
-    public string Key { get; set; } = string.Empty;
-
-    public LicenseRole Role { get; set; } = LicenseRole.User;
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public DateTime? ExpiresAt { get; set; }
-
-    public bool IsLifetime =>
-        !ExpiresAt.HasValue;
-}

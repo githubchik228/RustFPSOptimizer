@@ -159,3 +159,4 @@ public class LicenseService
             $"{value[6..12]}-" +
             $"{value[12..18]}";
     }
+}

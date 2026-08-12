@@ -159,17 +159,3 @@ public class LicenseService
             $"{value[6..12]}-" +
             $"{value[12..18]}";
     }
-}
-public class LicenseInfo
-{
-    public string Key { get; set; } = "";
-    public string Role { get; set; } = "USER";
-    public DateTime? ExpiresAt { get; set; }
-}
-public class LicenseActivationResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = "";
-    public DateTime? ExpiresAt { get; set; }
-    public string Role { get; set; } = "USER";
-}

@@ -173,5 +173,7 @@ public class LicenseManager
     public void Logout()
     {
         CurrentSession = null;
+    }
+}
         storage.ClearSession();
     }

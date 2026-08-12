@@ -1,3 +1,5 @@
+using RustFPSOptimizer.License;
+
 using System.Security.Cryptography;
 namespace LicenseServer;
 public class LicenseService

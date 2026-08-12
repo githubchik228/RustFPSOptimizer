@@ -1,5 +1,4 @@
 namespace RustFPSOptimizer.License;
-public class LicenseInfo
 {
     public string KeyId { get; set; } = "";
     public LicenseRole Role { get; set; }

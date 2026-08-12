@@ -82,6 +82,5 @@ public class LicenseCreateRequest
 
 public class LicenseActivateRequest
 {
-    public string Key { get; set; } =
-        string.Empty;
+    public string Key { get; set; } = string.Empty;
 }
